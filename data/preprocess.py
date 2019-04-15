@@ -1,7 +1,7 @@
 import random
-from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.resnet50 import preprocess_input
-from tensorflow.keras.utils import to_categorical
+from keras.preprocessing import image
+from keras.applications.resnet50 import preprocess_input
+from keras.utils import to_categorical
 
 to_categorical = to_categorical
 

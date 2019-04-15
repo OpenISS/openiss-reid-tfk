@@ -4,19 +4,20 @@ import numpy as np
 import tensorflow as tf
 # tf.enable_eager_execution()
 # print('[reid] enable eager execution: {}'.format(tf.executing_eagerly()))
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Input
-from tensorflow.keras.applications.resnet50 import ResNet50
-from tensorflow.keras import callbacks as kcb
-from tensorflow.keras.utils import to_categorical
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+import keras
+from keras.models import Model
+from keras.layers import Dense, GlobalAveragePooling2D, Input
+from keras.applications.resnet50 import ResNet50
+from keras import callbacks as kcb
+from keras.utils import to_categorical
+from keras.preprocessing.image import ImageDataGenerator
 
 from data.market1501 import Market1501
 from data.datagen import DataGen
 from data.preprocess import imagenet_process
 
 print('version of tensorflow: {}'.format(tf.VERSION))
-print('version of keras: {}'.format(tf.keras.__version__))
+print('version of keras: {}'.format(keras.__version__))
 
 
 ''' constant '''
@@ -129,7 +130,8 @@ def test():
     print('[reid] benchmark ...')
     from eval import Evaluator
     # model.load_weights('weights.h5')
-    model.load_weights('checkpoint/weights.260-0.13.h5')
+    # model.load_weights('checkpoint/weights.260-0.13.h5')
+    model.load_weights('/home/h_lai/Documents/dl/myreid/checkpoint/weights.500-1.42.h5')
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
     e.compute()
 

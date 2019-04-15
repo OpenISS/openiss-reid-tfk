@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 
 import matplotlib.pyplot as plt
-from tensorflow.keras.utils import normalize
+from keras.utils import normalize
 
 from data.preprocess import load_image, imagenet_process, img_to_array
 
