@@ -1,4 +1,5 @@
 import random
+import numpy as np
 from keras.preprocessing import image
 from keras.applications.resnet50 import preprocess_input
 from keras.utils import to_categorical
@@ -19,8 +20,7 @@ def load_image(path, target_size):
     return img
 
 def imagenet_process(ndarray):
-    from numpy import asarray
-    return preprocess_input(asarray(ndarray))
+    return preprocess_input(np.asarray(ndarray))
 
 def img_to_array(img):
     return image.img_to_array(img)
@@ -55,4 +55,49 @@ def data_argumentation(img_list, pad, prob=0.5):
             crop = crop.swapaxes(0, 1)
         argumented_imgs.append(crop)
 
-    return argumented_imgs
+    return np.asarray(argumented_imgs)
+
+def rea(imgs, img_w, img_h, ep=0.5, sl=0.02, sh=0.4, r1=0.3, r2=3.33):
+    """
+    Random Erasing Argumentation
+    images: a mini-batch of images
+    img_w:  the width of the batch images
+    img_h:  the height of the batch iamges
+    ep:     erasing probability
+    sl, sh: erasing area ratio range sl and sh
+    r1, r2: erasing aspect ratio range r1 and r2
+    """
+    p = np.random.rand()
+    # print('p: {}'.format(p))
+    if p > ep:
+        return imgs
+    else:
+        s = img_w * img_h
+        while True:
+            se = np.random.uniform(sl, sh) * s
+            re = np.random.uniform(r1, r2)
+            he = int(np.sqrt(se * re))
+            we = int(np.sqrt(se / re))
+            xe = int(np.random.uniform(0.0, img_w))
+            ye = int(np.random.uniform(0.0, img_h))
+            if xe + we <= img_w and ye + he <= img_h:
+                pv = np.random.uniform(0.0, 255.0)
+                for img in imgs:
+                    img[xe:xe + we, ye:ye + he, :] = pv
+                return imgs
+
+# TODO: not finish yet
+def sml(y_true, factor=0.1):
+    """
+    Label Smoothing
+    y_true: a batch of ground true labels
+    factor: smoothing factor, by default 0.1
+    """
+    smoothed_true = []
+    N = len(y_true)
+    for label in y_true:
+        if label[0] == 1.0:
+            smoothed_true.append([1 - ((N - 1) / N) * factor, factor / N])
+        else:
+            smoothed_true.append([factor / N, 1 - ((N - 1) / N) * factor])
+    return smoothed_true

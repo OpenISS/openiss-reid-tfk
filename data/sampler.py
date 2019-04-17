@@ -37,8 +37,8 @@ class RandomSampler(object):
         Return
             a list of images and a list of corresponding pids of these images
         """
-        image_list = []
-        label_list = []
+        img_paths = []
+        img_labels = []
         # loop over the pid in self.ids, randomly select the negative samples
         cur_id = self.ids.pop()
         sample_ids = [cur_id]
@@ -48,14 +48,13 @@ class RandomSampler(object):
 
         for iid in sample_ids:
             available_paths = self.id2paths[iid]
+            # for each random id, select k image randomly
             selected_path = random.sample(
                 available_paths, self.num_imgs_per_id)
 
-            # for each random id, select k image randomly
             for path in selected_path:
-                img = load_image(path, target_size=(self.img_h, self.img_w))
-                image_list.append(img)
-                label_list.append(int(iid))
+                img_paths.append(path)
+                img_labels.append(int(iid))
 
         # reset the index for the next epoch
         self.backup_ids.append(cur_id)
@@ -65,8 +64,7 @@ class RandomSampler(object):
             random.shuffle(self.ids)            # shuffle the pids list
             self.backup_ids = []                # create new memory for backup
 
-        # print('\n[sampler] sampling ids for batch {}\n{}:'.format(self.counter, sample_ids))
-        return image_list, label_list
+        return img_paths, img_labels
 
     def _process(self, dataset):
         """
