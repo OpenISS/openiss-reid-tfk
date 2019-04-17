@@ -3,7 +3,7 @@ import math
 import h5py
 import numpy as np
 
-import matplotlib.pyplot as plt
+import keras.backend as K
 from keras.utils import normalize
 
 from data.preprocess import load_image, imagenet_process, img_to_array
@@ -52,6 +52,9 @@ class Evaluator:
                         self.q_camids, self.g_camids, max_rank=max_rank)
         print('cmc: {}'.format(cmc))
         print('mAP: {}'.format(mAP))
+
+    def compute2(self):
+        pass
 
     @staticmethod
     def _get_info(datas):
@@ -164,11 +167,65 @@ class Evaluator:
 
         assert num_valid_q > 0, "Error: all query identities do not appear in gallery"
 
-        all_cmc = np.asarray(all_cmc).astype(np.float32)
+        all_cmc = np.asarray(all_cmc)
         all_cmc = all_cmc.sum(0) / num_valid_q
         mAP = np.mean(all_AP)
-
         return all_cmc, mAP
 
+    def euclidean_distance(self, feats):
+        feat_num = 64
+        feat1 = K.tile(K.expand_dims(feats, axis=0), [feat_num, 1, 1])
+        feat2 = K.tile(K.expand_dims(feats, axis=1), [1, feat_num, 1])
+        delta = feat1 - feat2
+        return K.sqrt(K.sum(K.square(delta), axis=2) + K.epsilon())
 
 
+    def single_eval(self):
+        """
+        For testing the evaluator funcionality
+        """
+        print('\nsingle evaluation')
+        # prepare the gallery
+        self.g_pids, self.g_camids = Evaluator._get_info(self.dataset.gallery)
+        self._prepare_gallery_feats()
+        # pick one image from query
+
+        # rand_idx = np.random.randint(0, len(self.dataset.query))
+        # query = self.dataset.query[rand_idx]
+
+        acc = 0
+        total = 0
+
+        for query in self.dataset.query:
+            # print('query image info (path, pid, camid):\n{}'.format(query))
+            # load the image, make batch
+            img = load_img_to_array(query[0], (self.img_h, self.img_w))
+            img = imagenet_process(img)
+            img = np.expand_dims(img, 0)
+            feat = self.model.predict(img)
+            # calculate the distance matrix
+            distmat = Evaluator._compute_distmat(self.g_feats, feat)
+            indices = np.argsort(distmat, axis=1)
+            sorted_pids = self.g_pids[indices]
+            sorted_cams = self.g_camids[indices]
+
+            # don't exclude the one with same pid and same camid
+            # if sorted_pids[0][0] == query[1]:
+            #     acc += 1
+
+            # exclude the one withe
+            k = 0
+            while k < sorted_pids.shape[1]:
+                if sorted_pids[0][k] != query[1]:
+                    print('[wrong result] {} should be {}, but found: {}'.format(
+                        query[0], query[1], sorted_pids[0][k]))
+                    break
+                elif sorted_pids[0][k] == query[1] and sorted_cams[0][k] != query[2]:
+                    acc += 1
+                    break
+                else:
+                    k += 1
+
+            total += 1
+
+        print('top1 acc: {}'.format(acc / total))

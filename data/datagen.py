@@ -34,7 +34,6 @@ class DataGen(object):
         """
         batch_imgs, batch_pids = self.sampler.batch_data()
         batch_imgs = data_argumentation(batch_imgs, self.padding)
-
-        batch_imgs = imagenet_process(np.asarray(batch_imgs))
+        batch_imgs = imagenet_process(batch_imgs)
         batch_pids = np.asarray(batch_pids)
         return batch_imgs, batch_pids

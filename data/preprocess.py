@@ -19,7 +19,8 @@ def load_image(path, target_size):
     return img
 
 def imagenet_process(ndarray):
-    return preprocess_input(ndarray)
+    from numpy import asarray
+    return preprocess_input(asarray(ndarray))
 
 def img_to_array(img):
     return image.img_to_array(img)

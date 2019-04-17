@@ -23,9 +23,10 @@ class RandomSampler(object):
         self.len = len(self.ids)
         self.backup_ids = []
         self.refill_threshold = self.num_ids_per_batch - 1
-
+        self.counter = 0
 
     def batch_data(self):
+        self.counter += 1
         return self._rand_select_images()
 
     def _rand_select_images(self):
@@ -64,6 +65,7 @@ class RandomSampler(object):
             random.shuffle(self.ids)            # shuffle the pids list
             self.backup_ids = []                # create new memory for backup
 
+        # print('\n[sampler] sampling ids for batch {}\n{}:'.format(self.counter, sample_ids))
         return image_list, label_list
 
     def _process(self, dataset):
