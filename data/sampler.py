@@ -2,7 +2,9 @@
 
 import random
 import os
-
+import copy
+import numpy as np
+from collections import defaultdict
 from .preprocess import load_image
 
 class RandomSampler(object):
@@ -18,16 +20,30 @@ class RandomSampler(object):
         self.num_imgs_per_id = num_imgs_per_id
         self.img_w = img_w
         self.img_h = img_h
-        self.ids, self.id2paths = self._process(dataset)
-        random.shuffle(self.ids)
-        self.len = len(self.ids)
-        self.backup_ids = []
-        self.refill_threshold = self.num_ids_per_batch - 1
         self.counter = 0
+
+        # map the id to all its paths
+        self.id2paths = defaultdict(list)
+        for (path, pid, _) in dataset:
+            self.id2paths[pid].append(path)
+        self.ids = list(self.id2paths.keys())
+
+        # how many images we have in an epoch
+        self.len = 0
+        for pid in self.ids:
+            id_paths = self.id2paths[pid]
+            s_num = len(id_paths)
+            if s_num < self.num_imgs_per_id:
+                s_num = self.num_imgs_per_id
+            self.len += s_num - (s_num % self.num_imgs_per_id)
+
+        self.len = len(self.ids)
+
 
     def batch_data(self):
         self.counter += 1
         return self._rand_select_images()
+
 
     def _rand_select_images(self):
         """
@@ -47,48 +63,45 @@ class RandomSampler(object):
         assert(len(sample_ids) == self.num_ids_per_batch)
 
         for iid in sample_ids:
-            available_paths = self.id2paths[iid]
+            avai_paths = self.id2paths[iid]
+            # if avai_paths for current pid is less than the needed value
+            if len(avai_paths) < self.num_imgs_per_id:
+                avai_paths = list(np.random.choice(avai_paths, size=self.num_imgs_per_id, replace=True))
+
             # for each random id, select k image randomly
-            selected_path = random.sample(
-                available_paths, self.num_imgs_per_id)
+            selected_path = random.sample(avai_paths, self.num_imgs_per_id)
 
             for path in selected_path:
                 img_paths.append(path)
                 img_labels.append(int(iid))
 
-        # reset the index for the next epoch
-        self.backup_ids.append(cur_id)
-        if len(self.ids) <= self.refill_threshold:
-            self.backup_ids.extend(self.ids)    # get all remaining pids
-            self.ids = self.backup_ids          # update ids reference
-            random.shuffle(self.ids)            # shuffle the pids list
-            self.backup_ids = []                # create new memory for backup
-
+        self.ids.append(cur_id)
         return img_paths, img_labels
 
-    def _process(self, dataset):
-        """
-        Prepare data structure for the sampling and eliminate the useless data.
 
-        Argument
-            dataset: the dataset used for current training or validation
-        """
-        # create a dictionary with the following structure
-        #  {  pid1 : [path11, path12, ...],
-        #     pid2 : [path21, path22, ...], ... }
-        id2paths = {}
-        for data in dataset:
-            image_path, pid, _ = data
-            if pid in id2paths:
-                id2paths[pid].append(image_path)
-            else:
-                id2paths[pid] = [image_path]
+    # def _process(self, dataset):
+    #     """
+    #     Prepare data structure for the sampling and eliminate the useless data.
 
-        # eliminate the pid which contains less than the required k images
-        ids = []
-        for pid, path_list in id2paths.items():
-            if len(path_list) >= self.num_imgs_per_id:
-                ids.append(pid)
-        print('[sampler] pids in the dataset: {}'.format(len(id2paths.keys())))
-        print('[sampler] useable pids: {}'.format(len(ids)))
-        return ids, id2paths
+    #     Argument
+    #         dataset: the dataset used for current training or validation
+    #     """
+    #     # create a dictionary with the following structure
+    #     #  {  pid1 : [path11, path12, ...],
+    #     #     pid2 : [path21, path22, ...], ... }
+    #     id2paths = {}
+    #     for data in dataset:
+    #         image_path, pid, _ = data
+    #         if pid in id2paths:
+    #             id2paths[pid].append(image_path)
+    #         else:
+    #             id2paths[pid] = [image_path]
+
+    #     # eliminate the pid which contains less than the required k images
+    #     ids = []
+    #     for pid, path_list in id2paths.items():
+    #         if len(path_list) >= self.num_imgs_per_id:
+    #             ids.append(pid)
+    #     print('[sampler] pids in the dataset: {}'.format(len(id2paths.keys())))
+    #     print('[sampler] useable pids: {}'.format(len(ids)))
+    #     return ids, id2paths

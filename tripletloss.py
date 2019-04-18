@@ -7,10 +7,9 @@ from keras import backend as K
 
 
 
-def triplet_hard_loss(num_ids, num_imgs, margin):
+def triplet_loss(num_ids, num_imgs, margin):
     p = num_ids
     k = num_imgs
-    margin = margin
 
     # construct labels
     mask = [i for i in range(1, p + 1) for j in range(k)]
@@ -44,10 +43,23 @@ def triplet_hard_loss(num_ids, num_imgs, margin):
 
         return dis_ap, dis_an
 
-    def loss(y_true, y_pred):
+    def triplet_hard_loss(y_true, y_pred):
         dist_mat = euclidean_distance(y_pred)
         dist_ap, dist_an = hard_sample_mining(dist_mat, mask)
         return K.mean(K.maximum(K.epsilon(), K.sum(margin + dist_ap - dist_an)))
 
-    return loss
+    def triplet_all_loss(y_true, y_pred):
+        N = dist_mat.shape[0]
+        L = K.reshape(K.tile(labels, [N]), [N, N])
+        Lt = K.transpose(L)
+
+        dist_mat = euclidean_distance(y_pred)
+        is_pos = K.equal(L, Lt)
+        is_neg = K.not_equal(L, Lt)
+        tmp_p = K.reshape(tf.boolean_mask(dist_mat, is_pos), [N, -1])
+        tmp_n = K.reshape(tf.boolean_mask(dist_mat, is_neg), [N, -1])
+
+        K.sum(tmp_p)
+
+    return triplet_hard_loss
 

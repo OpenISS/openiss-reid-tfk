@@ -5,6 +5,7 @@ import os
 import numpy as np
 
 from .sampler import RandomSampler
+# from .sampler2 import RandomSampler
 from .preprocess import data_argumentation, imagenet_process, \
                         load_image, img_to_array, rea, sml
 
@@ -19,6 +20,7 @@ class DataGen(object):
             dataset: train data in the format of (image_path, pid, camid).
         """
         self.padding = 10
+        self.dataset = dataset
         self.sampler = RandomSampler(dataset,
             num_ids, num_imgs_per_id,
             img_w, img_h

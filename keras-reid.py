@@ -1,11 +1,12 @@
 from __future__ import absolute_import, division, print_function
+from tripletloss import triplet_loss
 import numpy as np
 import tensorflow as tf
 
 import keras
 import keras.backend as K
 from keras.models import Model
-from keras.layers import Dense, GlobalAveragePooling2D, Input
+from keras.layers import Dense, GlobalAveragePooling2D, Input, BatchNormalization
 from keras import callbacks as kcb
 from keras.optimizers import Adam
 from keras.utils import to_categorical
@@ -35,8 +36,8 @@ g_img_h = 256
 g_img_w = 128
 g_img_ch = 3
 
-g_epoch = 120
-g_margin = 0.9
+g_epoch = 512
+g_margin = 0.3
 
 ''' dataset '''
 class TrainDataGenWrapper:
@@ -49,8 +50,8 @@ class TrainDataGenWrapper:
         while True:
             train_x, train_y = self.flow_func()
             train_y = to_categorical(train_y, self.nc)
-            yield train_x, [train_y, self.dummy] # for model training
-            # yield train_x, train_y  # for id_model training
+            # yield train_x, [train_y, self.dummy] # for model training
+            yield train_x, train_y  # for id_model training
 
 class ValDataGenWrapper:
     def __init__(self, flow_func, dummy, num_classes):
@@ -73,14 +74,13 @@ g_batch_size = g_num_ids * g_num_imgs
 g_steps_per_epoch = datagen.sampler.len // g_batch_size
 
 ''' loss '''
-from tripletloss import triplet_hard_loss
 factory = {
-    'triplet_hard': triplet_hard_loss(g_num_ids, g_num_imgs, g_margin),
+    'triplet_loss': triplet_loss(g_num_ids, g_num_imgs, g_margin),
     'categorical_crossentropy': tf.keras.losses.categorical_crossentropy
 }
 
 # loss = ['categorical_crossentropy']
-loss = [factory['categorical_crossentropy'], factory['triplet_hard']]
+loss = [factory['categorical_crossentropy'], factory['triplet_loss']]
 loss_weights = [1.0, 1.0]
 
 ''' optimizer '''
@@ -106,7 +106,7 @@ class EpochValCallback(keras.callbacks.Callback):
         # the validation datagen yield the data in the format that
         # each four images/pids/cams belong to the same pid
         imgs, pids, cams = self.datagen.flow()
-        feats = self.model.predict(imgs)[1]
+        feats = self.model.predict(imgs)[1] # TODO: now it is ft which should be fi
         val_loss = K.eval(self.loss_func(None, feats))
         print('val_loss: {}'.format(val_loss))
         self.loss_history.append(val_loss)
@@ -117,14 +117,14 @@ class EpochValCallback(keras.callbacks.Callback):
         self.mAP_history.append(mAP)
         self.epoches.append(epoch)
 
-    def on_train_end(self, logs):
-        import pylab as pl
-        from IPython import display
-        pl.ylim(0, int(self.loss_history[0] * 2))
-        pl.xlim(0, len(self.epoches))
-        pl.plot(self.epoches, self.loss_history)
-        pl.plot(self.epoches, self.cmc_history)
-        pl.plot(self.epoches, self.mAP_history)
+    # def on_train_end(self, logs):
+    #     from matplotlib import pyplot as pl
+    #     pl.ylim(0, int(self.loss_history[0] * 2))
+    #     pl.xlim(0, len(self.epoches))
+    #     pl.plot(self.epoches, self.loss_history)
+    #     pl.plot(self.epoches, self.cmc_history)
+    #     pl.plot(self.epoches, self.mAP_history)
+
 
     def euclidean_distance(self, feats):
         feat_num = 64
@@ -143,7 +143,18 @@ def make_scheduler():
             lr = g_base_lr
         elif epoch == 70:
             lr = g_base_lr * 0.1
+        # elif epoch == 120:
+        #     lr = g_base_lr * 0.01
         return lr
+
+    # def scheduler(epoch, lr):
+    #     if epoch < 10:
+    #         lr = g_base_lr * (epoch / 10)
+    #     elif epoch == 20:
+    #         lr = g_base_lr * 0.1
+    #     elif epoch == 60:
+    #         lr = g_base_lr * 0.01
+    #     return lr
     return scheduler
 
 
@@ -157,9 +168,10 @@ tensor_board = kcb.TensorBoard(
     write_graph=True, update_freq='epoch')
 
 change_lr = kcb.LearningRateScheduler(make_scheduler())
-epochval = EpochValCallback(v_datagen, factory['triplet_hard'])
+# epochval = EpochValCallback(v_datagen, factory['triplet_loss'])
 
-callbacks = [change_lr, check_point, tensor_board, epochval]
+# callbacks = [change_lr, check_point, tensor_board, epochval]
+callbacks = [change_lr, check_point, tensor_board]
 
 ''' metric '''
 # TODO: add metric function
@@ -173,20 +185,23 @@ g_input_shape = (g_img_h, g_img_w, g_img_ch)
 base = ResNet50(include_top=False, weights='imagenet',
                 input_tensor=Input(shape=g_input_shape))
 
-feature = GlobalAveragePooling2D(name='GAP')(base.output)
-feat_model = Model(inputs=base.input, outputs=feature)
+feature_t = GlobalAveragePooling2D(name='GAP')(base.output)
+feature_i = BatchNormalization()(feature_t)
+feat_model = Model(inputs=base.input, outputs=feature_i)
 
-prediction = Dense(g_num_classes, activation='softmax', name='FC')(feature)
+prediction = Dense(g_num_classes, activation='softmax',
+                   name='FC', bias_initializer='he_normal')(feature_i)
 id_model = Model(inputs=base.input, outputs=prediction)
 # id_model.summary()
 
-model = Model(inputs=base.input, outputs=[prediction, feature])
+model = Model(inputs=base.input, outputs=[prediction, feature_t])
 # model.summary()
 
 ''' compile model '''
 id_model.compile(optimizer=optimizer, loss=factory['categorical_crossentropy'],
                  metrics=['categorical_accuracy'])
-model.compile(optimizer=optimizer, loss=loss, loss_weights=loss_weights)
+model.compile(optimizer=optimizer, loss=loss,
+              loss_weights=loss_weights, metrics=['categorical_accuracy'])
 
 ''' train '''
 dummy = np.ones([g_batch_size, 2048])
@@ -204,12 +219,13 @@ def train():
         steps_per_epoch=g_steps_per_epoch,
         epochs=g_epoch, verbose=1, callbacks=callbacks
         )
-    model.save_weights('weights.h5')
+    model.save_weights('weights_bnn.h5')
 
 
 def test():
     print('[reid] benchmark ...')
-    model.load_weights('weights.h5')
+    model.load_weights('weights_bnn.h5')
+    # model.load_weights('weights.trihid_rea_margin0.6.h5')
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
     e.compute()
 
@@ -221,7 +237,7 @@ def train_only_id_loss():
         steps_per_epoch=g_steps_per_epoch,
         epochs=g_epoch, verbose=1, callbacks=callbacks
     )
-    id_model.save_weights('weights.h5')
+    id_model.save_weights('only_idloss_weights.h5')
 
 
 def train_and_test():
@@ -232,7 +248,7 @@ def train_and_test():
         steps_per_epoch=g_steps_per_epoch,
         epochs=g_epoch, verbose=1, callbacks=callbacks
     )
-    model.save_weights('weights.h5')
+    model.save_weights('weights_bnn.h5')
 
     print('[reid] benchmark ...')
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
@@ -245,7 +261,33 @@ def test2():
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
     e.single_eval()
 
-test2()
+
+def resume_train_and_test():
+    print('[reid] training ...')
+    model.load_weights('weights.cmc74.7_epoch1000_only_id_loss_rea.h5')
+    model.fit_generator(
+        train_datagen.flow(),
+        steps_per_epoch=g_steps_per_epoch,
+        epochs=g_epoch, verbose=1, callbacks=callbacks
+    )
+    model.save_weights('weights.h5')
+
+    print('[reid] benchmark ...')
+    e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
+    e.compute()
 
 
-# train_and_test()
+# test2()
+
+
+# check list
+# 1. learning rate
+# 2. losses weights
+# 3. model weight
+# 4. epoch
+
+# train()
+# test()
+train_and_test()
+# train_only_id_loss()
+# resume_train_and_test()
