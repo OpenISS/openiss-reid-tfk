@@ -27,6 +27,7 @@ print('version of keras: {}'.format(keras.__version__))
 
 ''' global variables '''
 g_data_root  = '/home/h_lai/Documents/dl/reid/triplet/datasets'
+# g_data_root = './datasets'
 g_output_dir = './output'
 
 g_num_ids  = 16
@@ -229,6 +230,20 @@ def train_and_test(weight_path):
     model.save_weights(weight_path)
 
     print('[reid] benchmark ...')
+    e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
+    e.compute()
+
+def train(target_model, save_weight_path):
+    target_model.fit_generator(
+        train_datagen.flow(),
+        steps_per_epoch=g_steps_per_epoch,
+        epochs=g_epochs, verbose=1, callbacks=callbacks
+    )
+    target_model.save_weights(save_weight_path)
+
+def test(load_weight_path):
+    print('[reid] benchmark ...')
+    model.load_weights(load_weight_path)
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
     e.compute()
 
