@@ -31,7 +31,7 @@ class Evaluator:
         self.img_h = img_h
         self.img_w = img_w
 
-        self.is_normalized = False
+        self.is_normalized = True
         if self.is_normalized:
             print('feature will be normalized')
 
@@ -45,7 +45,8 @@ class Evaluator:
         self._prepare_query_feats()
         print('shape of query features: {}'.format(self.q_feats.shape))
 
-        self.distmat = Evaluator._compute_distmat(self.g_feats, self.q_feats)
+        self.distmat = Evaluator._compute_euclidean_distmat(self.g_feats, self.q_feats)
+        # self.distmat = Evaluator._compute_cosine_distmat(self.g_feats, self.q_feats)
         print('distmat shape: {}'.format(self.distmat.shape))
 
         cmc, mAP = Evaluator._eval_func(self.distmat, self.q_pids, self.g_pids,
@@ -103,11 +104,27 @@ class Evaluator:
                             self.dataset.query, self.img_h, self.img_w,  self.is_normalized)
 
     @staticmethod
-    def _compute_distmat(g_feats, q_feats):
+    def _compute_euclidean_distmat(g_feats, q_feats):
+        print('using eclidean distance for evaluation')
         mats = []
         for _q_feat in q_feats:
             _mat = np.linalg.norm(g_feats - _q_feat, axis=1, ord=2)
             mats.append(_mat)
+
+        distmat = np.asarray(mats)
+        distmat = np.square(mats)
+        return distmat
+
+    @staticmethod
+    def _compute_cosine_distmat(g_feats, q_feats):
+        print('using cosine distance for evaluation')
+        mats = []
+        g_feats_norm = np.linalg.norm(g_feats, axis=1)
+        for _q_feat_norm in q_feats:
+            dot_prod = np.dot(g_feats, _q_feat_norm)
+            _q_feat_norm = np.linalg.norm(_q_feat_norm)
+            cosdist = -1 * dot_prod / (_q_feat_norm * g_feats_norm)
+            mats.append(cosdist)
 
         distmat = np.asarray(mats)
         distmat = np.square(mats)
@@ -204,7 +221,7 @@ class Evaluator:
             img = np.expand_dims(img, 0)
             feat = self.model.predict(img)
             # calculate the distance matrix
-            distmat = Evaluator._compute_distmat(self.g_feats, feat)
+            distmat = Evaluator._compute_euclidean_distmat(self.g_feats, feat)
             indices = np.argsort(distmat, axis=1)
             sorted_pids = self.g_pids[indices]
             sorted_cams = self.g_camids[indices]

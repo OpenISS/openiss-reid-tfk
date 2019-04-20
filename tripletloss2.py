@@ -185,7 +185,7 @@ def triplet_loss(num_ids, num_imgs, margin):
         triplet_loss = tf.reduce_sum(triplet_loss) / \
             (num_positive_triplets + 1e-16)
 
-        return triplet_loss, fraction_positive_triplets
+        return triplet_loss
 
 
     def batch_hard_triplet_loss(y_true, embeddings):

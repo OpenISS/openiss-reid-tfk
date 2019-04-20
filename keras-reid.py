@@ -1,5 +1,4 @@
 from __future__ import absolute_import, division, print_function
-from tripletloss import triplet_loss
 import numpy as np
 import tensorflow as tf
 
@@ -21,6 +20,7 @@ from data.datagen import DataGen
 from data.valdatagen import ValDataGen
 from data.preprocess import imagenet_process
 from evaluator import Evaluator
+from tripletloss2 import triplet_loss
 
 
 print('version of tensorflow: {}'.format(tf.VERSION))
@@ -36,7 +36,7 @@ g_img_h = 256
 g_img_w = 128
 g_img_ch = 3
 
-g_epoch = 512
+g_epoch = 120
 g_margin = 0.3
 
 ''' dataset '''
@@ -50,8 +50,8 @@ class TrainDataGenWrapper:
         while True:
             train_x, train_y = self.flow_func()
             train_y = to_categorical(train_y, self.nc)
-            # yield train_x, [train_y, self.dummy] # for model training
-            yield train_x, train_y  # for id_model training
+            yield train_x, [train_y, self.dummy] # for model training
+            # yield train_x, train_y  # for id_model training
 
 class ValDataGenWrapper:
     def __init__(self, flow_func, dummy, num_classes):
@@ -143,18 +143,7 @@ def make_scheduler():
             lr = g_base_lr
         elif epoch == 70:
             lr = g_base_lr * 0.1
-        # elif epoch == 120:
-        #     lr = g_base_lr * 0.01
         return lr
-
-    # def scheduler(epoch, lr):
-    #     if epoch < 10:
-    #         lr = g_base_lr * (epoch / 10)
-    #     elif epoch == 20:
-    #         lr = g_base_lr * 0.1
-    #     elif epoch == 60:
-    #         lr = g_base_lr * 0.01
-    #     return lr
     return scheduler
 
 
@@ -186,16 +175,21 @@ base = ResNet50(include_top=False, weights='imagenet',
                 input_tensor=Input(shape=g_input_shape))
 
 feature_t = GlobalAveragePooling2D(name='GAP')(base.output)
-feature_i = BatchNormalization()(feature_t)
+feature_i = BatchNormalization(scale=False)(feature_t)
 feat_model = Model(inputs=base.input, outputs=feature_i)
+# feat_model = Model(inputs=base.input, outputs=feature_t)
 
 prediction = Dense(g_num_classes, activation='softmax',
-                   name='FC', bias_initializer='he_normal')(feature_i)
+                   kernel_initializer='random_uniform',
+                   name='FC', use_bias=False)(feature_i)
 id_model = Model(inputs=base.input, outputs=prediction)
 # id_model.summary()
 
 model = Model(inputs=base.input, outputs=[prediction, feature_t])
 # model.summary()
+
+for layer in model.layers:
+    layer.trainable = True
 
 ''' compile model '''
 id_model.compile(optimizer=optimizer, loss=factory['categorical_crossentropy'],
@@ -219,12 +213,12 @@ def train():
         steps_per_epoch=g_steps_per_epoch,
         epochs=g_epoch, verbose=1, callbacks=callbacks
         )
-    model.save_weights('weights_bnn.h5')
+    model.save_weights('final_weights.h5')
 
 
 def test():
     print('[reid] benchmark ...')
-    model.load_weights('weights_bnn.h5')
+    model.load_weights('final_weights.h5')
     # model.load_weights('weights.trihid_rea_margin0.6.h5')
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
     e.compute()
@@ -237,7 +231,10 @@ def train_only_id_loss():
         steps_per_epoch=g_steps_per_epoch,
         epochs=g_epoch, verbose=1, callbacks=callbacks
     )
-    id_model.save_weights('only_idloss_weights.h5')
+    id_model.save_weights('weights_bnn_only_id_loss.h5')
+    print('[reid] benchmark ...')
+    e = Evaluator(dataset, feat_model, g_img_h, g_img_w)
+    e.compute()
 
 
 def train_and_test():
@@ -248,7 +245,7 @@ def train_and_test():
         steps_per_epoch=g_steps_per_epoch,
         epochs=g_epoch, verbose=1, callbacks=callbacks
     )
-    model.save_weights('weights_bnn.h5')
+    model.save_weights('final_weights_with_tripletloss2.h5')
 
     print('[reid] benchmark ...')
     e = Evaluator(dataset, feat_model, g_img_h, g_img_w)

@@ -37,8 +37,6 @@ class RandomSampler(object):
                 s_num = self.num_imgs_per_id
             self.len += s_num - (s_num % self.num_imgs_per_id)
 
-        self.len = len(self.ids)
-
 
     def batch_data(self):
         self.counter += 1
@@ -77,31 +75,3 @@ class RandomSampler(object):
 
         self.ids.append(cur_id)
         return img_paths, img_labels
-
-
-    # def _process(self, dataset):
-    #     """
-    #     Prepare data structure for the sampling and eliminate the useless data.
-
-    #     Argument
-    #         dataset: the dataset used for current training or validation
-    #     """
-    #     # create a dictionary with the following structure
-    #     #  {  pid1 : [path11, path12, ...],
-    #     #     pid2 : [path21, path22, ...], ... }
-    #     id2paths = {}
-    #     for data in dataset:
-    #         image_path, pid, _ = data
-    #         if pid in id2paths:
-    #             id2paths[pid].append(image_path)
-    #         else:
-    #             id2paths[pid] = [image_path]
-
-    #     # eliminate the pid which contains less than the required k images
-    #     ids = []
-    #     for pid, path_list in id2paths.items():
-    #         if len(path_list) >= self.num_imgs_per_id:
-    #             ids.append(pid)
-    #     print('[sampler] pids in the dataset: {}'.format(len(id2paths.keys())))
-    #     print('[sampler] useable pids: {}'.format(len(ids)))
-    #     return ids, id2paths
