@@ -1,10 +1,11 @@
-"""ResNet50 model for Keras.
-
-# modify the last conv block
+'''
+# last conv block
 # stride change from 2 to 1
 # modified by Haotao Lai
+'''
 
 
+"""ResNet50 model for Keras.
 https://github.com/keras-team/keras-applications/blob/master/keras_applications/resnet50.py
 
 # Reference:
@@ -243,6 +244,7 @@ def ResNet50(include_top=True,
              input_shape=None,
              pooling=None,
              classes=1000,
+             last_stride=1,
              **kwargs):
     """Instantiates the ResNet50 architecture.
 
@@ -346,12 +348,15 @@ def ResNet50(include_top=True,
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='e')
     x = identity_block(x, 3, [256, 256, 1024], stage=4, block='f')
 
-    # original code
-    # x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a')
+    # -------- modify as follow to get a larger spatial feature map ---------------
+    if last_stride == 1:
+        x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a', strides=(1, 1))
+    # ------------------------ end of modification --------------------------------
 
-    # ----- modify as follow to get a larger spatial feature map --------------
-    x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a', strides=(1, 1))
-    # ------ end of modification ----------------------------------------------
+    # ---------------------------- original code ----------------------------------
+    else:
+        x = conv_block(x, 3, [512, 512, 2048], stage=5, block='a')
+    # ---------------------------- original code ----------------------------------
 
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='b')
     x = identity_block(x, 3, [512, 512, 2048], stage=5, block='c')
