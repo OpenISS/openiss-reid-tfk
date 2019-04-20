@@ -20,7 +20,7 @@ from data.datagen import DataGen
 from data.valdatagen import ValDataGen
 from data.preprocess import imagenet_process
 from evaluator import Evaluator
-from tripletloss2 import triplet_loss
+from tripletloss import triplet_loss
 
 
 print('version of tensorflow: {}'.format(tf.VERSION))
