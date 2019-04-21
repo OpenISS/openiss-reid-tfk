@@ -17,10 +17,10 @@ import tensorflow as tf
 import numpy as np
 import keras.backend as K
 
-def triplet_loss(num_pid_per_batch, num_img_per_id, margin, triplet_type='hard'):
-    if triplet_type not in ('hard', 'all'):
+def triplet_loss(num_pid_per_batch, num_img_per_id, margin, type='hard'):
+    if type not in ('hard', 'all'):
         raise Exception('unsupport triplet type: {}, should be \
-                        one of (hard, all)'.format(triplet_type))
+                        one of (hard, all)'.format(type))
     p = num_pid_per_batch
     k = num_img_per_id
 
@@ -265,9 +265,9 @@ def triplet_loss(num_pid_per_batch, num_img_per_id, margin, triplet_type='hard')
         return triplet_loss
 
 
-    if triplet_type == 'hard':
+    if type == 'hard':
         return batch_hard_triplet_loss
-    elif triplet_type == 'all':
+    elif type == 'all':
         return batch_all_triplet_loss
     else:
-        raise Exception('unsupport triplet type {}'.format(triplet_type))
+        raise Exception('unsupport triplet type {}'.format(type))

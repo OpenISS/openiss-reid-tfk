@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 '''
 # last conv block
 # stride change from 2 to 1
@@ -15,9 +19,7 @@ https://github.com/keras-team/keras-applications/blob/master/keras_applications/
 
 Adapted from code contributed by BigMoyan.
 """
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+
 
 import os
 import warnings

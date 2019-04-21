@@ -57,7 +57,9 @@ def data_argumentation(img_list, pad, prob=0.5):
 
     return np.asarray(argumented_imgs)
 
-def rea(imgs, img_w, img_h, ep=0.5, sl=0.02, sh=0.4, r1=0.3, r2=3.33):
+
+def rea(imgs, img_w, img_h, ep=0.5, sl=0.02, sh=0.4,
+        r1=0.3, r2=3.33, mean=(0.4914, 0.4822, 0.4465)):
     """
     Random Erasing Argumentation
     images: a mini-batch of images
@@ -81,23 +83,16 @@ def rea(imgs, img_w, img_h, ep=0.5, sl=0.02, sh=0.4, r1=0.3, r2=3.33):
             xe = int(np.random.uniform(0.0, img_w))
             ye = int(np.random.uniform(0.0, img_h))
             if xe + we <= img_w and ye + he <= img_h:
-                pv = np.random.uniform(0.0, 255.0)
+                # pv = np.random.uniform(0.0, 255.0)
                 for img in imgs:
-                    img[xe:xe + we, ye:ye + he, :] = pv
+                    img[0, xe:xe + we, ye:ye + he] = mean[0]
+                    img[1, xe:xe + we, ye:ye + he] = mean[1]
+                    img[2, xe:xe + we, ye:ye + he] = mean[2]
                 return imgs
 
-# TODO: not finish yet
-def sml(y_true, factor=0.1):
-    """
-    Label Smoothing
-    y_true: a batch of ground true labels
-    factor: smoothing factor, by default 0.1
-    """
-    smoothed_true = []
-    N = len(y_true)
-    for label in y_true:
-        if label[0] == 1.0:
-            smoothed_true.append([1 - ((N - 1) / N) * factor, factor / N])
-        else:
-            smoothed_true.append([factor / N, 1 - ((N - 1) / N) * factor])
-    return smoothed_true
+def sml(train_y_one_hot, num_classes, epsilon=0.1):
+        is_one_mask = train_y_one_hot == 1
+        is_zero_mask = train_y_one_hot == 0
+        train_y_one_hot[is_one_mask] = 1 - ((num_classes - 1) / num_classes * epsilon)
+        train_y_one_hot[is_zero_mask] = epsilon / num_classes
+        return train_y_one_hot

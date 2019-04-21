@@ -7,6 +7,7 @@ from collections import defaultdict
 from .sampler import RandomSampler
 from .preprocess import data_argumentation, imagenet_process, \
                         load_image, img_to_array, rea, sml
+from keras.utils import to_categorical
 
 class DataGen(object):
 
@@ -128,3 +129,18 @@ class ValDataGen:
             if q_val_len > min_len and g_val_len > min_len:
                 ids.append(key)
         return ids, q_id2tuple, g_id2tuple
+
+
+class TrainDataGenWrapper:
+    def __init__(self, flow_func, dummy, num_classes):
+        self.flow_func = flow_func
+        self.dummy = dummy
+        self.nc = num_classes
+
+    def flow(self):
+        while True:
+            train_x, train_y = self.flow_func()
+            train_y = to_categorical(train_y, self.nc)
+            train_y = sml(train_y, self.nc)
+            yield train_x, [train_y, self.dummy]     # for model training
+            # yield train_x, train_y                 # for id_model training
