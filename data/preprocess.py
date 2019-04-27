@@ -1,7 +1,8 @@
 import random
 import numpy as np
 from keras.preprocessing import image
-from keras.applications.resnet50 import preprocess_input
+from backbone.resnet50 import preprocess_input
+# from backbone.resnet50v2 import preprocess_input
 from keras.utils import to_categorical
 
 to_categorical = to_categorical
@@ -58,41 +59,44 @@ def data_argumentation(img_list, pad, prob=0.5):
     return np.asarray(argumented_imgs)
 
 
-def rea(imgs, img_w, img_h, ep=0.5, sl=0.02, sh=0.4,
-        r1=0.3, r2=3.33, mean=(0.4914, 0.4822, 0.4465)):
+def rea(img, img_w, img_h, ep=0.5, sl=0.02, sh=0.4,
+        r1=0.3, mean=[103.939, 116.779, 123.68]):
     """
     Random Erasing Argumentation
-    images: a mini-batch of images
+    img: an image in array format (h, w, ch)
     img_w:  the width of the batch images
     img_h:  the height of the batch iamges
     ep:     erasing probability
     sl, sh: erasing area ratio range sl and sh
-    r1, r2: erasing aspect ratio range r1 and r2
+    r1: erasing aspect ratio r1
     """
     p = np.random.rand()
     # print('p: {}'.format(p))
     if p > ep:
-        return imgs
+        return img
     else:
         s = img_w * img_h
         while True:
             se = np.random.uniform(sl, sh) * s
-            re = np.random.uniform(r1, r2)
-            he = int(np.sqrt(se * re))
-            we = int(np.sqrt(se / re))
-            xe = int(np.random.uniform(0.0, img_w))
-            ye = int(np.random.uniform(0.0, img_h))
-            if xe + we <= img_w and ye + he <= img_h:
+            re = np.random.uniform(r1, 1 / r1)
+            he = int(round(np.sqrt(se * re)))
+            we = int(round(np.sqrt(se / re)))
+            xe = int(np.random.uniform(0.0, img_h))
+            ye = int(np.random.uniform(0.0, img_w))
+            if xe + he <= img_h and ye + we <= img_w:
+                img[xe:xe + he, ye:ye + we, :] = mean
+                return img
+                # for img in imgs:
+                    # img[xe:xe + we, ye:ye + he, :] = mean
+
                 # pv = np.random.uniform(0.0, 255.0)
-                for img in imgs:
-                    img[0, xe:xe + we, ye:ye + he] = mean[0]
-                    img[1, xe:xe + we, ye:ye + he] = mean[1]
-                    img[2, xe:xe + we, ye:ye + he] = mean[2]
-                return imgs
+                # for img in imgs:
+                #     img[xe:xe + we, ye:ye + he, :] = pv
+                # return img
 
 def sml(train_y_one_hot, num_classes, epsilon=0.1):
-        is_one_mask = train_y_one_hot == 1
-        is_zero_mask = train_y_one_hot == 0
-        train_y_one_hot[is_one_mask] = 1 - ((num_classes - 1) / num_classes * epsilon)
-        train_y_one_hot[is_zero_mask] = epsilon / num_classes
-        return train_y_one_hot
+    is_one_mask = train_y_one_hot == 1
+    is_zero_mask = train_y_one_hot == 0
+    train_y_one_hot[is_one_mask] = 1 - ((num_classes - 1) / num_classes * epsilon)
+    train_y_one_hot[is_zero_mask] = epsilon / num_classes
+    return train_y_one_hot

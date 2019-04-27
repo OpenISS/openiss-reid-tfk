@@ -11,7 +11,6 @@ import zipfile
 
 import os.path as osp
 
-from utils.iotools import mkdir_if_missing
 from .bases import BaseImageDataset
 
 
@@ -33,9 +32,9 @@ class DukeMTMCreID(BaseImageDataset):
     def __init__(self, root='./datasets', verbose=True, **kwargs):
         super(DukeMTMCreID, self).__init__()
         self.dataset_dir = osp.join(root, self.dataset_dir)
-        self.train_dir = osp.join(self.dataset_dir, '/bounding_box_train')
-        self.query_dir = osp.join(self.dataset_dir, '/query')
-        self.gallery_dir = osp.join(self.dataset_dir, '/bounding_box_test')
+        self.train_dir = osp.join(self.dataset_dir, 'bounding_box_train')
+        self.query_dir = osp.join(self.dataset_dir, 'query')
+        self.gallery_dir = osp.join(self.dataset_dir, 'bounding_box_test')
 
         self._check_before_run()
 

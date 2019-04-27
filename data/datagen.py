@@ -47,8 +47,19 @@ class DataGen(object):
 
         # enable data argumentation
         batch_imgs = data_argumentation(batch_imgs, self.padding)
+
         # enable random erasing
-        batch_imgs = rea(batch_imgs, self.img_w, self.img_h)
+        tmp = []
+        for img in batch_imgs:
+            img = rea(img, self.img_w, self.img_h, ep=0.7)
+            tmp.append(img)
+        batch_imgs = tmp
+        # from keras.preprocessing import image
+        # for img in batch_imgs:
+        #     img = image.array_to_img(img)
+        #     img.show()
+        # exit(1)
+
         # adapt to imagenet
         batch_imgs = imagenet_process(batch_imgs)
         # enable smooth label
@@ -141,6 +152,6 @@ class TrainDataGenWrapper:
         while True:
             train_x, train_y = self.flow_func()
             train_y = to_categorical(train_y, self.nc)
-            train_y = sml(train_y, self.nc)
+            # train_y = sml(train_y, self.nc)
             yield train_x, [train_y, self.dummy]     # for model training
             # yield train_x, train_y                 # for id_model training

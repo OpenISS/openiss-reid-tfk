@@ -15,7 +15,8 @@ from data.dataset.market1501 import Market1501
 from data.sampler import RandomSampler
 from data.datagen import DataGen, ValDataGen, TrainDataGenWrapper
 from data.preprocess import imagenet_process
-from backbone import ResNet50
+from backbone.resnet50 import ResNet50
+from backbone.resnet50v2 import ResNet50V2
 from tripletloss import triplet_loss
 from evaluator import Evaluator
 from logger import setup_logger
@@ -28,6 +29,13 @@ print('version of keras: {}'.format(keras.__version__))
 g_data_root  = '/home/h_lai/Documents/dl/reid/triplet/datasets'
 # g_data_root = './datasets'
 g_output_dir = './output'
+
+g_resnet_version  = 'v1'
+g_lr_warmup       = 'on'
+g_random_erasing  = 'on'
+g_label_smoothing = 'off'
+g_net_last_stride = 1
+g_bn_neck         = 'on'
 
 g_num_ids  = 16
 g_num_imgs = 4
@@ -56,6 +64,10 @@ g_train_logger = setup_logger('train', g_output_dir)
 g_test_logger  = setup_logger('test', g_output_dir)
 
 
+''' configuration validation '''
+
+
+
 ''' loss '''
 # all possible loss function should register here
 g_loss_factory = {
@@ -77,12 +89,19 @@ g_optimizer = Adam(g_base_lr)
 
 ''' model '''
 tmp_shape = (g_img_h, g_img_w, g_img_ch)
-g_base = ResNet50(include_top=False, weights='imagenet',
-                  input_tensor=Input(shape=tmp_shape),
-                  last_stride=g_stride)
+
+if g_resnet_version == 'v1':
+    g_base = ResNet50(include_top=False, weights='imagenet',
+                    input_tensor=Input(shape=tmp_shape),
+                    last_stride=g_stride)
+elif g_resnet_version == 'v2':
+    g_base = ResNet50V2(include_top=False, weights='imagenet',
+                    input_tensor=Input(shape=tmp_shape),
+                    last_stride=g_stride)
 
 tmp_ft = GlobalAveragePooling2D(name='triplet')(g_base.output)
-tmp_fi = BatchNormalization(scale=False)(tmp_ft)
+# tmp_fi = BatchNormalization(scale=False)(tmp_ft)
+tmp_fi = BatchNormalization()(tmp_ft)
 feat_model = Model(inputs=g_base.input, outputs=tmp_fi)
 # feat_model = Model(inputs=base.input, outputs=feature_t)
 
@@ -129,7 +148,7 @@ def make_scheduler():
     '''
     def scheduler(epoch, lr):
         if epoch < 10:
-            lr = g_base_lr * (epoch / 10)
+            lr = g_base_lr * ((epoch + 1) / 10)
         elif epoch == 10:
             lr = g_base_lr * 10
         elif epoch == 40:
@@ -205,9 +224,8 @@ def train(target_model, save_weight_path):
 def test(load_weight_path):
     print('[reid] benchmark ...')
     g_model.load_weights(load_weight_path)
-    e = Evaluator(g_dataset, feat_model, g_img_h, g_img_w)
-    e.compute()
-
+    res = g_tester.compute()
+    print(res)
 # #################################################################################
 
 '''
@@ -216,9 +234,10 @@ Training Checklist
     2. losses weights
     3. model weight
     4. epoch
+    5. what kind of preprocessing
 '''
 
 # train_and_test('weight_id_and_triplet_loss.h5')
 # train_only_id_loss('weights_only_id_loss.h5')
-# test('/home/h_lai/Documents/dl/myreid/backup/cmc84/final_weights_with_tripletloss2.h5')
+# test('backup/cmc85.39/weights.h5')
 train(g_model, 'weights.h5')
