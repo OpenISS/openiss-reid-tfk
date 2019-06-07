@@ -71,7 +71,8 @@ g_test_logger  = setup_logger('test', g_output_dir)
 ''' loss '''
 # all possible loss function should register here
 g_loss_factory = {
-    'triplet_loss': triplet_loss(g_num_ids, g_num_imgs, g_margin),
+    'triplet_loss': triplet_loss(g_num_ids, g_num_imgs,
+    g_margin, type='all'),
     'categorical_crossentropy': categorical_crossentropy
 }
 
