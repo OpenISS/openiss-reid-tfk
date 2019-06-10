@@ -21,7 +21,7 @@
 
 # Requst memory and gpu
 #$ -l h_vmem=32G
-#$ -l GPU=2
+#$ -l GPU=1
 
 # Execute the script
 module load python/3.6.8

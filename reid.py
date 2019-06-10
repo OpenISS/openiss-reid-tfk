@@ -20,15 +20,20 @@ from backbone.resnet50v2 import ResNet50V2
 from tripletloss import triplet_loss
 from evaluator import Evaluator
 from logger import setup_logger
+from iotool import mkdir_if_missing, check_isfile
+
+
+import os
+os.environ['CUDA_VISIBLE_DEVICES']='0, 1, 2'
 
 print('version of tensorflow: {}'.format(tf.VERSION))
 print('version of keras: {}'.format(keras.__version__))
 
-
 ''' global variables '''
-g_data_root  = '/home/h_lai/Documents/dl/reid/triplet/datasets'
-# g_data_root = './datasets'
+# g_data_root  = '/home/h_lai/Documents/dl/reid/triplet/datasets'
+g_data_root = '../datasets'
 g_output_dir = './output'
+mkdir_if_missing(g_output_dir)
 
 g_resnet_version  = 'v1'
 g_lr_warmup       = 'on'
@@ -159,7 +164,7 @@ def make_scheduler():
         return lr
     return scheduler
 
-
+mkdir_if_missing('./checkpoint/')
 check_point = kcb.ModelCheckpoint(
     './checkpoint/weights.{epoch:02d}-{loss:.2f}.h5',
     monitor='loss', save_weights_only=True,
