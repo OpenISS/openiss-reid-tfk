@@ -1,0 +1,20 @@
+Download the private:
+    ssh h_lai@viryasubmit.encs.concordia.ca
+    scp h_lai@viryasubmit.encs.concordia.ca:/home/h_lai/.ssh/id_rsa ~/.ssh/virya_id_rsa
+Start ssh-agent: 
+    eval `ssh-agent`
+Add the private key to the agent:
+    ssh-add ~/.ssh/virya_id_rsa
+
+
+cat the log file:
+    ssh h_lai@virya.encs.concordia.ca cat reid-tfk/reid-tfk.qlog
+
+delete the log file:
+    ssh h_lai@virya.encs.concordia.ca rm reid-tfk/reid-tfk.qlog
+
+upload directory to Virya host:
+    rsync -a reid-tfk h_lai@virya.encs.concordia.ca:/home/h_lai/
+
+download directory from Virya host:
+    rsync -a h_lai@virya.encs.concordia.ca:/home/h_lai/reid-tfk/ reid-tfk/
