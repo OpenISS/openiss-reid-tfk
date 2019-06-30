@@ -32,7 +32,8 @@ print('version of keras: {}'.format(keras.__version__))
 ''' global variables '''
 # g_data_root  = '/home/h_lai/Documents/dl/reid/triplet/datasets'
 g_data_root = '../datasets'
-g_output_dir = './output'
+# g_output_dir = './output'
+g_output_dir = './output/cross_ds_v'
 mkdir_if_missing(g_output_dir)
 
 g_resnet_version  = 'v1'
@@ -232,6 +233,17 @@ def test(load_weight_path):
     g_model.load_weights(load_weight_path)
     res = g_tester.compute()
     print(res)
+
+def cross_dataset_test(model_path, ds1, ds2):
+    print('[reid] corss dataset benchmark ...')
+    print('[reid] loading weights from: {}'.format(model_path))
+    g_model.load_weights(model_path)
+    tester1 = Evaluator(ds1, feat_model, g_img_h, g_img_w)
+    tester2 = Evaluator(ds2, feat_model, g_img_h, g_img_w)
+    res1 = tester1.compute()
+    print(res1)
+    res2 = tester2.compute()
+    print(res2)
 # #################################################################################
 
 '''
