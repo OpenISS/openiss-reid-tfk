@@ -12,6 +12,8 @@ from keras.optimizers import Adam
 from keras.utils import to_categorical
 
 from data.dataset.market1501 import Market1501
+from data.dataset.dukemtmcreid import DukeMTMCreID
+from data.dataset.cuhk03 import CUHK03
 from data.sampler import RandomSampler
 from data.datagen import DataGen, ValDataGen, TrainDataGenWrapper
 from data.preprocess import imagenet_process
@@ -30,9 +32,7 @@ print('version of tensorflow: {}'.format(tf.VERSION))
 print('version of keras: {}'.format(keras.__version__))
 
 ''' global variables '''
-# g_data_root  = '/home/h_lai/Documents/dl/reid/triplet/datasets'
 g_data_root = '../datasets'
-# g_output_dir = './output'
 g_output_dir = './output/cross_ds_v'
 mkdir_if_missing(g_output_dir)
 
@@ -192,50 +192,7 @@ g_model.compile(optimizer=g_optimizer, loss=g_loss,
 
 
 # #################################################################################
-
-def train_only_id_loss(weight_path):
-    print('[reid] only id loss training ...')
-    g_id_model.fit_generator(
-        g_datagen.flow(),
-        steps_per_epoch=g_steps_per_epoch,
-        epochs=g_epochs, verbose=1, callbacks=g_callbacks
-    )
-    g_id_model.save_weights(weight_path)
-
-    print('[reid] benchmark ...')
-    e = Evaluator(g_dataset, feat_model, g_img_h, g_img_w)
-    e.compute()
-
-
-def train_and_test(weight_path):
-    print('[reid] training ...')
-    g_model.fit_generator(
-        g_datagen.flow(),
-        steps_per_epoch=g_steps_per_epoch,
-        epochs=g_epochs, verbose=1, callbacks=g_callbacks
-    )
-    g_model.save_weights(weight_path)
-
-    print('[reid] benchmark ...')
-    e = Evaluator(g_dataset, feat_model, g_img_h, g_img_w)
-    e.compute()
-
-def train(target_model, save_weight_path):
-    target_model.fit_generator(
-        g_datagen.flow(),
-        steps_per_epoch=g_steps_per_epoch,
-        epochs=g_epochs, verbose=1, callbacks=g_callbacks
-    )
-    target_model.save_weights(save_weight_path)
-
-def test(load_weight_path):
-    print('[reid] benchmark ...')
-    g_model.load_weights(load_weight_path)
-    res = g_tester.compute()
-    print(res)
-
 def cross_dataset_test(model_path, ds1, ds2):
-    print('[reid] corss dataset benchmark ...')
     print('[reid] loading weights from: {}'.format(model_path))
     g_model.load_weights(model_path)
     tester1 = Evaluator(ds1, feat_model, g_img_h, g_img_w)
@@ -246,16 +203,23 @@ def cross_dataset_test(model_path, ds1, ds2):
     print(res2)
 # #################################################################################
 
-'''
-Training Checklist
-    1. learning rate
-    2. losses weights
-    3. model weight
-    4. epoch
-    5. what kind of preprocessing
-'''
 
-# train_and_test('weight_id_and_triplet_loss.h5')
-# train_only_id_loss('weights_only_id_loss.h5')
-# test('backup/cmc85.39/weights.h5')
-train(g_model, 'weights.h5')
+ds_market = Market1501(root=g_data_root)
+ds_cuhk = CUHK03(root=g_data_root)
+ds_duke = DukeMTMCreID(root=g_data_root)
+
+market_model = '../models/reid/market1501.h5'
+cuhk_model = '../models/reid/cuhk03.h5'
+duke_model = '../models/reid/duke.h5'
+
+print('based on market, cuhk, duke')
+cross_dataset_test(market_model, ds_cuhk, ds_duke)
+print('*' * 20)
+print('based on cuhk, market, duke')
+cross_dataset_test(cuhk_model, ds_market, ds_duke)
+print('*' * 20)
+print('based on duke, market, cuhk')
+cross_dataset_test(duke_model, ds_market, ds_cuhk)
+print('*' * 20)
+
+
