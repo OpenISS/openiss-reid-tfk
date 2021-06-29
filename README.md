@@ -1,4 +1,5 @@
 # OpenISS Person Re-Identification Baseline
+[![DOI](https://zenodo.org/badge/doi/10.5281/zenodo.5042265.svg)](https://doi.org/10.5281/zenodo.5042265)
 
 This repo basically is the OpenISS re-implementation (tensorflow + keras) of a person
 re-identification baseline proposed by the paper
