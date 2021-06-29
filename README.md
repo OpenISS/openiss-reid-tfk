@@ -1,12 +1,18 @@
-# Person Re-Identification Baseline
+# OpenISS Person Re-Identification Baseline
 
-This repo basically is the re-implementation (tensorflow + keras) of a person
-re-identification baseline propose by the paper
+This repo basically is the OpenISS re-implementation (tensorflow + keras) of a person
+re-identification baseline proposed by the paper
 ["Bag of Tricks and A Strong Baseline for Deep Person Re-identification"](https://arxiv.org/abs/1903.07071).
 
 The authors original implementation which is in Pytorch can be found in their
 [repo](https://github.com/michuanhaohao/reid-strong-baseline).
 
+This is a part of the Eric Lai's ML portion of the [OpenISS](https://github.com/OpenISS/OpenISS) project for his
+master's thesis:
+
+* [Haotao Lai](https://github.com/laihaotao), [*An OpenISS Framework Specialization for Person Re-identification*](https://spectrum.library.concordia.ca/985788/), Master's thesis, August 2019, Concordia University, Montreal
+
+See also: [openiss-yolov3](https://github.com/OpenISS/openiss-yolov3).
 
 ## Enviornment
 
